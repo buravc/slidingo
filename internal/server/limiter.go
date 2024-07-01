@@ -2,20 +2,22 @@ package server
 
 import (
 	"net/http"
+	"sync/atomic"
 	"time"
 )
 
 type limiter struct {
-	pool    chan struct{}
+	counter *atomic.Int32
 	timeout time.Duration
 
 	handler http.Handler
 }
 
 func newLimiter(poolSize int, timeout time.Duration, handler http.Handler) *limiter {
-	pool := make(chan struct{}, poolSize)
+	var counter atomic.Int32
+	counter.Store(int32(poolSize))
 	return &limiter{
-		pool,
+		&counter,
 		timeout,
 		handler,
 	}
@@ -26,15 +28,12 @@ func (l *limiter) SetTimeout(timeout time.Duration) {
 }
 
 func (l *limiter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	select {
-	case l.pool <- struct{}{}:
-		break
-	case <-time.After(l.timeout):
-		w.WriteHeader(http.StatusServiceUnavailable)
+	currentCounter := l.counter.Load()
+	if currentCounter > 0 && l.counter.CompareAndSwap(currentCounter, currentCounter-1) {
+		l.handler.ServeHTTP(w, r)
+		l.counter.Add(+1)
 		return
 	}
 
-	l.handler.ServeHTTP(w, r)
-
-	<-l.pool
+	w.WriteHeader(http.StatusServiceUnavailable)
 }
