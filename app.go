@@ -15,7 +15,7 @@ type App struct {
 	counter   request.Counter
 }
 
-func NewApp(filePath, addr string, maxConcurrentRequestCount int, autosaveDuration, counterWindow time.Duration) *App {
+func NewApp(filePath, addr string, maxConcurrentRequestCount int, timeout, autosaveDuration, counterWindow time.Duration) *App {
 	persistor := state.NewAutosavingPersistor(filePath, autosaveDuration)
 	state, err := persistor.Load()
 	var counter request.Counter
@@ -30,7 +30,7 @@ func NewApp(filePath, addr string, maxConcurrentRequestCount int, autosaveDurati
 		}
 	}
 
-	httpServer := server.New(addr,maxConcurrentRequestCount, counter)
+	httpServer := server.New(addr, maxConcurrentRequestCount, timeout, counter)
 
 	return &App{
 		counter:   counter,
@@ -39,11 +39,11 @@ func NewApp(filePath, addr string, maxConcurrentRequestCount int, autosaveDurati
 	}
 }
 
-func NewAppWithZeroState(filePath, addr string, maxConcurrentRequestCount int, autosaveDuration, counterWindow time.Duration) *App {
+func NewAppWithZeroState(filePath, addr string, maxConcurrentRequestCount int, timeout, autosaveDuration, counterWindow time.Duration) *App {
 	persistor := state.NewAutosavingPersistor(filePath, autosaveDuration)
 	counter := request.NewCounter(counterWindow)
 
-	httpServer := server.New(addr,maxConcurrentRequestCount, counter)
+	httpServer := server.New(addr, maxConcurrentRequestCount, timeout, counter)
 
 	return &App{
 		counter:   counter,
@@ -55,12 +55,12 @@ func NewAppWithZeroState(filePath, addr string, maxConcurrentRequestCount int, a
 func (a *App) Start() error {
 	a.persistor.Start(a.counter)
 	errorChan := make(chan error)
-	go func ()  {
+	go func() {
 		if err := a.server.Start(); err != nil {
 			log.Printf("application is shutting down: %v", err)
 			errorChan <- err
 			return
-		}	
+		}
 		errorChan <- nil
 	}()
 
@@ -80,10 +80,10 @@ func (a *App) Stop() error {
 	return nil
 }
 
-func (s *App) SetTimeout(timeout time.Duration) { 
+func (s *App) SetTimeout(timeout time.Duration) {
 	s.server.SetTimeout(timeout)
 }
 
-func (s *App) Clear() { 
+func (s *App) Clear() {
 	s.counter.Clear()
 }

@@ -14,13 +14,13 @@ type HTTPServer struct {
 	limiter *limiter
 }
 
-func New(address string, maxConcurrentRequestCount int, counter request.Counter) *HTTPServer {
+func New(address string, maxConcurrentRequestCount int, timeout time.Duration, counter request.Counter) *HTTPServer {
 	handler := newHandler(counter)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handler.ServeHTTP)
 
-	limiter := newLimiter(maxConcurrentRequestCount, time.Millisecond*300, mux)
+	limiter := newLimiter(maxConcurrentRequestCount, timeout, mux)
 
 	return &HTTPServer{
 		Server: &http.Server{

@@ -17,6 +17,7 @@ func main() {
 	counterWindowStr := flag.String("window", "60s", "window of the request counter")
 
 	maxConcurReq := flag.Int("maxCon", 5, "maximum number of concurrent requests")
+	timeoutStr := flag.String("timeout", "300ms", "timeout window")
 	flag.Parse()
 
 	autosaveDuration, err := time.ParseDuration(*autosaveDurationStr)
@@ -29,7 +30,12 @@ func main() {
 		panic(fmt.Errorf("invalid window is passed as an argument: %w", err))
 	}
 
-	app := NewApp(*filePath, *addr, *maxConcurReq, autosaveDuration, counterWindow)
+	timeout, err := time.ParseDuration(*timeoutStr)
+	if err != nil {
+		panic(fmt.Errorf("invalid timeout is passed as an argument: %w", err))
+	}
+
+	app := NewApp(*filePath, *addr, *maxConcurReq, timeout, autosaveDuration, counterWindow)
 
 	go ListenGracefulShutdown(app)
 	if err := app.Start(); err != nil {

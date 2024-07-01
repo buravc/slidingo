@@ -21,6 +21,7 @@ func TestMain(m *testing.M) {
 	counterWindowStr := flag.String("window", "60s", "window of the request counter")
 
 	maxConcurReq := flag.Int("maxCon", 5, "maximum number of concurrent requests")
+	timeoutStr := flag.String("timeout", "300ms", "timeout window")
 	flag.Parse()
 
 	autosaveDuration, err := time.ParseDuration(*autosaveDurationStr)
@@ -33,7 +34,12 @@ func TestMain(m *testing.M) {
 		panic(fmt.Errorf("invalid window is passed as an argument: %w", err))
 	}
 
-	a = NewAppWithZeroState(*filePath, *addr, *maxConcurReq, autosaveDuration, counterWindow)
+	timeout, err := time.ParseDuration(*timeoutStr)
+	if err != nil {
+		panic(fmt.Errorf("invalid timeout is passed as an argument: %w", err))
+	}
+
+	a = NewAppWithZeroState(*filePath, *addr, *maxConcurReq, timeout, autosaveDuration, counterWindow)
 
 	go a.Start()
 
@@ -55,7 +61,7 @@ func Test_ParallelRequest_HalfTimeout(t *testing.T) {
 	}
 
 	codeChan, bodyChan := execRequests(t, 10)
-	
+
 	assertStatusCodes(t, codeChan, expectedSuccesses, expectedTimeouts)
 
 	assertResponseBody(t, bodyChan, expectedBodies)
@@ -68,19 +74,19 @@ func Test_ParallelRequest_AllSuccess(t *testing.T) {
 	expectedSuccesses := 10
 
 	expectedBodies := map[int]struct{}{
-		1: {},
-		2: {},
-		3: {},
-		4: {},
-		5: {},
-		6: {},
-		7: {},
-		8: {},
-		9: {},
+		1:  {},
+		2:  {},
+		3:  {},
+		4:  {},
+		5:  {},
+		6:  {},
+		7:  {},
+		8:  {},
+		9:  {},
 		10: {},
 	}
 
-	a.SetTimeout(time.Second*3)
+	a.SetTimeout(time.Second * 3)
 	a.Clear()
 
 	codeChan, bodyChan := execRequests(t, 10)
@@ -134,7 +140,7 @@ func assertStatusCodes(t *testing.T, codeChan chan int, expectedSuccesses, expec
 	}
 
 	if actualSuccesses != expectedSuccesses {
-		t.Errorf("expected success error count does not match: expected: %d, actual: %d", expectedSuccesses, actualSuccesses)
+		t.Errorf("expected success count does not match: expected: %d, actual: %d", expectedSuccesses, actualSuccesses)
 	}
 
 }
