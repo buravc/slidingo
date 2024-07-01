@@ -28,12 +28,20 @@ func (l *limiter) SetTimeout(timeout time.Duration) {
 }
 
 func (l *limiter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	currentCounter := l.counter.Load()
-	if currentCounter > 0 && l.counter.CompareAndSwap(currentCounter, currentCounter-1) {
-		l.handler.ServeHTTP(w, r)
-		l.counter.Add(+1)
-		return
+	timeoutChan := time.After(l.timeout)
+	for {
+		select {
+		case <-timeoutChan:
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		default:
+			currentCounter := l.counter.Load()
+			if currentCounter > 0 && l.counter.CompareAndSwap(currentCounter, currentCounter-1) {
+				l.handler.ServeHTTP(w, r)
+				l.counter.Add(+1)
+				return
+			}
+		}
 	}
 
-	w.WriteHeader(http.StatusServiceUnavailable)
 }
