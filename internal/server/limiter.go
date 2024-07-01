@@ -12,13 +12,17 @@ type limiter struct {
 	handler http.Handler
 }
 
-func newLimiter(poolSize int, timeout time.Duration, handler http.Handler) http.Handler {
+func newLimiter(poolSize int, timeout time.Duration, handler http.Handler) *limiter {
 	pool := make(chan struct{}, poolSize)
 	return &limiter{
 		pool,
 		timeout,
 		handler,
 	}
+}
+
+func (l *limiter) SetTimeout(timeout time.Duration) {
+	l.timeout = timeout
 }
 
 func (l *limiter) ServeHTTP(w http.ResponseWriter, r *http.Request) {

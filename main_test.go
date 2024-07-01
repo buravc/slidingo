@@ -42,21 +42,60 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func Test_ParallelRequest(t *testing.T) {
+func Test_ParallelRequest_HalfTimeout(t *testing.T) {
 	expectedTimeouts := 5
 	expectedSuccesses := 5
 
 	expectedBodies := map[int]struct{}{
-		1: struct{}{},
-		2: struct{}{},
-		3: struct{}{},
-		4: struct{}{},
-		5: struct{}{},
+		1: {},
+		2: {},
+		3: {},
+		4: {},
+		5: {},
 	}
 
+	codeChan, bodyChan := execRequests(t, 10)
+	
+	assertStatusCodes(t, codeChan, expectedSuccesses, expectedTimeouts)
+
+	assertResponseBody(t, bodyChan, expectedBodies)
+
+	close(codeChan)
+}
+
+func Test_ParallelRequest_AllSuccess(t *testing.T) {
+	expectedTimeouts := 0
+	expectedSuccesses := 10
+
+	expectedBodies := map[int]struct{}{
+		1: {},
+		2: {},
+		3: {},
+		4: {},
+		5: {},
+		6: {},
+		7: {},
+		8: {},
+		9: {},
+		10: {},
+	}
+
+	a.SetTimeout(time.Second*3)
+	a.Clear()
+
+	codeChan, bodyChan := execRequests(t, 10)
+
+	assertStatusCodes(t, codeChan, expectedSuccesses, expectedTimeouts)
+
+	assertResponseBody(t, bodyChan, expectedBodies)
+
+	close(codeChan)
+}
+
+func execRequests(t *testing.T, count int) (chan int, chan io.ReadCloser) {
 	codeChan := make(chan int)
 	bodyChan := make(chan io.ReadCloser)
-	for i := 0; i < 10; i++ {
+	for i := 0; i < count; i++ {
 		go func() {
 			req, err := http.NewRequest(http.MethodGet, "/", nil)
 			if err != nil {
@@ -71,11 +110,7 @@ func Test_ParallelRequest(t *testing.T) {
 		}()
 	}
 
-	assertStatusCodes(t, codeChan, expectedSuccesses, expectedTimeouts)
-
-	assertResponseBody(t, bodyChan, expectedBodies)
-
-	close(codeChan)
+	return codeChan, bodyChan
 }
 
 func assertStatusCodes(t *testing.T, codeChan chan int, expectedSuccesses, expectedTimeouts int) {

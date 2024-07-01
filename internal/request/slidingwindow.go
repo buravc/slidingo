@@ -18,6 +18,7 @@ type snapshot struct {
 type Counter interface {
 	Count() int
 	Snapshot() ([]byte, error)
+	Clear()
 }
 
 // slidingWindowCounter counts requests within the given window with a millisecond accuracy
@@ -81,3 +82,10 @@ func (s *slidingWindowCounter) Snapshot() ([]byte, error) {
 
 	return json.Marshal(snap)
 }
+
+func (s *slidingWindowCounter) Clear() {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	clear(s.requests)
+} 

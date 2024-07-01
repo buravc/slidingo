@@ -79,3 +79,11 @@ func (a *App) Stop() error {
 
 	return nil
 }
+
+func (s *App) SetTimeout(timeout time.Duration) { 
+	s.server.SetTimeout(timeout)
+}
+
+func (s *App) Clear() { 
+	s.counter.Clear()
+}

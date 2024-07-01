@@ -10,6 +10,8 @@ import (
 
 type HTTPServer struct {
 	*http.Server
+
+	limiter *limiter
 }
 
 func New(address string, maxConcurrentRequestCount int, counter request.Counter) *HTTPServer {
@@ -25,7 +27,13 @@ func New(address string, maxConcurrentRequestCount int, counter request.Counter)
 			Addr: address,
 			Handler: limiter,
 		},
+
+		limiter: limiter,
 	}
+}
+
+func (s *HTTPServer) SetTimeout(timeout time.Duration) {
+	s.limiter.SetTimeout(timeout)
 }
 
 func (s *HTTPServer) Start() error {
